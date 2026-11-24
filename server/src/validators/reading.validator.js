@@ -71,4 +71,7 @@ const readingValidator = [
 
 module.exports = {
   readingValidator,
+  DATE_PATTERN,
+  isValidCalendarDate,
+  isNotFutureKolkataDate,
 };
