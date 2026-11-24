@@ -29,7 +29,6 @@ function AuthShell({ children }) {
               <path d="M0 72 C45 50,63 62,96 40 S158 63,195 34 S260 50,340 14" />
             </svg>
           </div>
-          <p className="privacy">Your readings stay private to your account.</p>
         </div>
       </section>
       <section className="auth-panel">

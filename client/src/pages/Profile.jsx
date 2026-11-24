@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { getInitials } from "@/lib/display";
 
@@ -8,13 +7,7 @@ function displayValue(value) {
 }
 
 function Profile() {
-  const navigate = useNavigate();
-  const { user, isLoading, logout } = useAuth();
-
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <p className="status-line" role="status">Loading account...</p>;
@@ -44,22 +37,6 @@ function Profile() {
         <div className="profile-identity">
           <h2 id="account-information-heading">{name}</h2>
           <p>{email}</p>
-        </div>
-        <dl className="profile-info">
-          <div>
-            <dt>Full name</dt>
-            <dd>{name}</dd>
-          </div>
-          <div>
-            <dt>Email address</dt>
-            <dd>{email}</dd>
-          </div>
-        </dl>
-        <div className="profile-footer">
-          <p>Sign out of this account on this device.</p>
-          <button type="button" className="btn btn-secondary" onClick={handleLogout}>
-            Log out
-          </button>
         </div>
       </section>
     </>

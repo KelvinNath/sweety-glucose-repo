@@ -1,131 +1,163 @@
 # Sweety – Blood Glucose Tracker
 
-Sweety is a personal blood glucose tracker. A user registers, signs in, and records up to four readings a day. The app shows today's summary, a reading history, and daily, month-to-date, and previous-month reports. Each account can access only its own readings.
-
 Repository: [https://github.com/KelvinNath/sweety-glucose-repo](https://github.com/KelvinNath/sweety-glucose-repo)
 
-## Key features
+Sweety lets a person sign in and record blood glucose readings. Each account sees only its own data. Dates use the Asia/Kolkata calendar.
 
-- User registration and login
-- Secure password hashing and JWT authentication
-- Personal glucose reading management
-- Four daily reading slots: Morning, After Breakfast, After Lunch, and After Dinner
-- Reading validation and one reading per slot per day
-- Glucose values from 40 to 600 mg/dL, with no future dates
-- Daily, month-to-date, and previous-month reports
-- Dashboard statistics and an account profile
+## 1. Project overview
 
-Empty reports return zero readings and null statistics.
+A person can save up to four readings a day:
 
-## Tech stack
+- Morning
+- After Breakfast
+- After Lunch
+- After Dinner
 
-Versions are the ranges declared in each `package.json`. The UI is JavaScript. Prisma **6.19.3** is the version in use. Do not upgrade it.
+The app then shows a daily summary, a reading history, and three reports: one day, the month so far, and the previous month.
 
-**Frontend:** React ^19.3.1, React DOM ^19.3.1, React Router ^7.18.6, Vite ^8.3.6, Tailwind CSS ^4.3.5, shadcn ^4.23.0, Base UI ^1.9.0, lucide-react ^1.79.0, and ESLint ^10.14.0.
+## 2. Features
 
-**Backend:** Express ^5.3.0, Prisma and @prisma/client ^6.19.3, PostgreSQL, bcryptjs ^3.0.3, jsonwebtoken ^9.0.3, express-validator ^7.3.2, cors ^2.8.6, dotenv ^18.0.10, and nodemon ^3.1.14.
+**Sign in**
 
-## Project structure
+- Create an account or sign in with email and password
+- Passwords are stored as a bcrypt hash and are never sent back by the API
+- Protected pages need a signed-in user
+- The app shows the signed-in name. Sign out returns to the login page.
+
+**Readings**
+
+- Add, view, edit, and delete readings
+- One reading per time slot per day
+- On the dashboard, Add reading opens a form for the selected day
+
+**Checks the app makes**
+
+- Date looks like `2026-11-25` and cannot be a future day in Asia/Kolkata
+- The time slot must be one of the four slots above
+- The value must be a whole number from 40 to 600
+- A second reading for the same day and slot is rejected
+- A new account needs a name of 2–50 characters, a valid email, and a password of at least 8 characters with one letter and one number
+
+**Reports**
+
+- Daily: that day’s readings and summary numbers
+- Month to date: from the 1st of the selected month through the selected date
+- Previous month: the calendar month before the selected date
+- Each report shows the highest value, the lowest value, the average to one decimal place, and how many readings were counted
+- A period with no readings shows a count of 0 and no highest, lowest, or average
+
+## 3. Technology stack
+
+The app is written in JavaScript. Use Prisma **6.19.3**. Leave that version as it is.
+
+| Part | Tools |
+| --- | --- |
+| Frontend | React, React Router, Vite, Tailwind CSS |
+| Backend | Express, express-validator |
+| Database | PostgreSQL, Prisma |
+| Sign-in | bcryptjs, JSON Web Tokens |
+
+## 4. Project structure
 
 ```text
 sweety-glucose-repo/
-├── client/                 React + Vite frontend
-│   ├── src/components/     Layout, dashboard, readings, and reports
-│   ├── src/context/        AuthContext
-│   ├── src/pages/          Login, Register, Dashboard, Readings, Reports, Profile
-│   ├── src/services/       API, auth, readings, and reports clients
-│   └── .env.example
-├── server/
-│   ├── prisma/             Schema, migration, and seed script
-│   ├── src/                Routes, controllers, services, and validators
-│   └── .env.example
+├── client/          The website (React + Vite)
+│   └── src/pages/   Login, Register, Dashboard, Readings, Reports, Profile
+├── server/          The API (Express)
+│   └── prisma/      Database schema, migration, and sample data
 └── README.md
 ```
 
-## Prerequisites
+## 5. Prerequisites
+
+Install these before you start:
 
 - Node.js and npm
-- PostgreSQL running locally
+- PostgreSQL, running on your computer
 
-`DATABASE_URL` and `JWT_SECRET` are backend-only secrets. They belong in `server/.env`, which is gitignored. The frontend only needs the public API base URL.
+## 6. Environment configuration
 
-## PostgreSQL setup
+Copy the example files. Edit the copies. Do not commit the real files.
 
-Create a database named `sweety_db`:
-
-```sql
-CREATE DATABASE sweety_db;
-```
-
-Or:
+**API.** From the `server` folder:
 
 ```bash
-createdb sweety_db
-```
-
-## Backend setup
-
-From the `server` directory:
-
-```bash
-cd server
-npm install
 cp .env.example .env
 ```
 
-Edit `server/.env`:
+Then set these values in `server/.env`:
 
-- `PORT` — API port. The application uses **5001**.
-- `DATABASE_URL` — PostgreSQL connection string for `sweety_db`.
-- `JWT_SECRET` — a long random secret used only to sign tokens.
+| Name | What to put |
+| --- | --- |
+| `PORT` | `5001` |
+| `DATABASE_URL` | Your PostgreSQL login. The database name is `sweety_db`. Replace `USER` and `PASSWORD`. |
+| `JWT_SECRET` | A long random secret. Replace the placeholder. |
 
-Do not commit `server/.env`.
+Example shape:
 
-## Database migration and seed
-
-Stay in `server`. Apply the migration, generate the Prisma Client, and load the demo data:
-
-```bash
-npx prisma migrate dev
-npx prisma generate
-npm run db:seed
+```text
+postgresql://USER:PASSWORD@localhost:5432/sweety_db
 ```
 
-`npm run db:seed` runs `prisma db seed`. Prisma 6 prints a deprecation warning because the seed command is set with `prisma.seed` in `server/package.json`. The command still works.
-
-The seed creates or updates one evaluation user and sample readings for the last seven days in Asia/Kolkata, including today. It does not delete other users or readings. Running it again updates the same demo rows.
-
-## Demo credentials
-
-This account is for evaluation only. The password is stored in `server/prisma/seed.js` and must not be used in production. The database stores only its bcrypt hash.
-
-| Field | Value |
-| --- | --- |
-| Name | Demo Patient |
-| Email | demo@sweety.local |
-| Password | SweetyDemo123! |
-
-## Frontend setup
-
-From the `client` directory:
+**Website.** From the `client` folder:
 
 ```bash
-cd client
-npm install
 cp .env.example .env.local
 ```
 
-`client/.env.example` contains:
+`client/.env.example` already has the right local value:
 
 ```text
 VITE_API_BASE_URL=http://localhost:5001/api
 ```
 
-`client/.env.local` is gitignored. The base URL already ends in `/api`.
+Keep the `/api` at the end.
 
-## Running the application
+## 7. Database setup
 
-Use two terminals.
+Create the database:
+
+```bash
+createdb sweety_db
+```
+
+Or in `psql`:
+
+```sql
+CREATE DATABASE sweety_db;
+```
+
+Then, from the `server` folder:
+
+```bash
+npm install
+npx prisma migrate dev
+npx prisma generate
+```
+
+## 8. Seed data
+
+From the `server` folder:
+
+```bash
+npm run db:seed
+```
+
+This adds one demo account and sample readings for seven days, including today, with all four slots filled. Running it again updates those same rows. It does not delete other accounts.
+
+Prisma 6 prints a warning that the seed setting in `server/package.json` is deprecated. The command still works. Leave that setting unchanged.
+
+Use this account only to try the app. The password below appears in plain text only in `server/prisma/seed.js`. The database stores the hash.
+
+| | |
+| --- | --- |
+| Name | Demo Patient |
+| Email | demo@sweety.local |
+| Password | SweetyDemo123! |
+
+## 9. Running the application
+
+Start the API and the website in two terminals.
 
 Terminal 1, from `server`:
 
@@ -133,58 +165,69 @@ Terminal 1, from `server`:
 npm run dev
 ```
 
-The API listens on [http://localhost:5001](http://localhost:5001).
+API: [http://localhost:5001](http://localhost:5001)
 
 Terminal 2, from `client`:
 
 ```bash
+npm install
 npm run dev
 ```
 
-Vite serves the app at [http://localhost:5173](http://localhost:5173).
+Website: [http://localhost:5173](http://localhost:5173)
 
-## API overview
+Open the website, then sign in with the demo account or register a new one.
 
-Base URL: `http://localhost:5001/api`. Protected routes require `Authorization: Bearer <token>`. Readings and reports are limited to the authenticated user. A date is `YYYY-MM-DD` and cannot be in the future relative to Asia/Kolkata.
+## 10. Testing
 
-| Method | Path | Auth | Purpose |
-| --- | --- | --- | --- |
-| GET | `/health` | No | Check that the API is running |
-| POST | `/auth/register` | No | Create an account and return a token |
-| POST | `/auth/login` | No | Sign in and return a token |
-| GET | `/auth/me` | Yes | Return the current user |
-| GET | `/readings` | Yes | List the current user's readings |
-| POST | `/readings` | Yes | Create a reading |
-| PUT | `/readings/:id` | Yes | Update a reading |
-| DELETE | `/readings/:id` | Yes | Delete a reading |
-| GET | `/reports/daily?date=YYYY-MM-DD` | Yes | One day, with readings and statistics |
-| GET | `/reports/mtd?date=YYYY-MM-DD` | Yes | Statistics from the 1st of that month through the date |
-| GET | `/reports/monthly?date=YYYY-MM-DD` | Yes | Statistics for the previous calendar month |
+The API has no automated tests. From `server`, `npm test` only prints an error and stops.
 
-## Testing
-
-There is no automated backend test suite. From `server`, `npm test` is a placeholder and exits with an error.
-
-From `client`:
+From `client`, you can check the website code with:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-Manual checks, with PostgreSQL, the API, and the frontend running:
+To check the app by hand, with PostgreSQL, the API, and the website running:
 
-- Register, confirm the header shows your name, sign out, and sign in again.
-- Confirm a wrong password and a duplicate email are rejected.
-- Add, edit, and delete a reading. Confirm it appears on the dashboard and is removed after deletion.
-- Save the same date and slot again and confirm the duplicate is rejected.
-- Open Daily, Month to date, and Last month. An empty day shows zero readings and null statistics.
-- Sign in as the demo user and confirm another account's readings are not visible.
+1. Register a new account. The app should show that name. Sign out, then sign in again.
+2. Try a wrong password. It should be rejected. Try to register the same email again. That should be rejected too.
+3. On the dashboard, add a reading for the selected day. It should appear in that day’s slots.
+4. On Reading history, edit a reading, then delete one. The deleted reading should leave the dashboard.
+5. Save the same day and slot again. The app should reject the duplicate.
+6. Open Reports and switch between Daily, Month to date, and Previous month. An empty period shows a count of 0.
+7. Sign in as the demo user, then as a second account. The second account should not see the demo readings.
 
-## Assumptions and future improvements
+## 11. API overview
 
-- Calendar dates use Asia/Kolkata and are stored as PostgreSQL dates.
-- The browser keeps the JWT in `localStorage` under `sweety_auth_token`.
-- The demo account exists only for evaluation.
+Base URL: `http://localhost:5001/api`
 
-Possible later work, not implemented here: automated tests, profile editing, password reset, trend charts, a CORS allowlist, and refresh tokens.
+Send the token on protected routes as `Authorization: Bearer <token>`. Dates use `YYYY-MM-DD`.
+
+| Method | Path | Sign-in | What it does |
+| --- | --- | --- | --- |
+| GET | `/health` | No | Check that the API is running |
+| POST | `/auth/register` | No | Create an account and return a token |
+| POST | `/auth/login` | No | Sign in and return a token |
+| GET | `/auth/me` | Yes | Return the current user |
+| GET | `/readings` | Yes | List this user's readings |
+| POST | `/readings` | Yes | Add a reading |
+| PUT | `/readings/:id` | Yes | Replace a reading |
+| DELETE | `/readings/:id` | Yes | Delete a reading |
+| GET | `/reports/daily?date=` | Yes | One day, with readings and summary numbers |
+| GET | `/reports/mtd?date=` | Yes | From the 1st of that month through the date |
+| GET | `/reports/monthly?date=` | Yes | The previous calendar month |
+
+## 12. Notes and future improvements
+
+- Dates follow Asia/Kolkata and are stored as calendar dates.
+- The browser keeps the sign-in token in `localStorage` under `sweety_auth_token`. A token lasts 7 days.
+- The demo account is only for trying the app.
+
+Not built yet:
+
+- Automated API tests
+- Editing a profile or resetting a password
+- A limited list of allowed websites for API requests
+- Refresh tokens
