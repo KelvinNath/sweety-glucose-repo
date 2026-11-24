@@ -1,11 +1,8 @@
 import { useState } from "react";
-import { Droplets, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import AuthShell from "@/components/auth/AuthShell";
 import { useAuth } from "@/context/AuthContext";
-
-const inputClassName =
-  "h-10 w-full rounded-lg border border-violet-100 bg-white px-3 text-sm text-violet-950 outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-violet-400 focus-visible:ring-3 focus-visible:ring-violet-200";
 
 function fieldErrorsFromResponse(error) {
   const details = error?.data?.errors;
@@ -82,142 +79,83 @@ function Register() {
         return;
       }
 
-      setFormError(
-        "We couldn't create your account. Please check your connection and try again.",
-      );
+      setFormError("We couldn't create your account. Please check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-violet-50 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-violet-100 bg-white p-6 shadow-lg sm:p-8">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-violet-700 text-white">
-            <Droplets className="size-6" aria-hidden="true" />
-          </span>
-          <p className="text-sm font-semibold tracking-wide text-violet-700">Sweety</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-violet-950">
-            Create your account
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Start tracking your blood glucose levels.
-          </p>
-        </div>
-
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium text-violet-950">
-              Full name
-            </label>
+    <AuthShell>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <span className="eyebrow">Get started</span>
+        <h2>Create your account</h2>
+        <p>Start building a clearer view of your daily readings.</p>
+        {formError ? <div className="form-alert" role="alert">{formError}</div> : null}
+        <label className="field" htmlFor="name">
+          <span>Full name</span>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            autoComplete="name"
+            required
+            placeholder="e.g. Alex Morgan"
+            value={name}
+            aria-invalid={Boolean(fieldErrors.name)}
+            onChange={(event) => setName(event.target.value)}
+          />
+          {fieldErrors.name ? <small className="field-error">{fieldErrors.name}</small> : null}
+        </label>
+        <label className="field" htmlFor="email">
+          <span>Email address</span>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            aria-invalid={Boolean(fieldErrors.email)}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          {fieldErrors.email ? <small className="field-error">{fieldErrors.email}</small> : null}
+        </label>
+        <label className="field" htmlFor="password">
+          <span>Password</span>
+          <div className="password-wrap">
             <input
-              id="name"
-              name="name"
-              type="text"
-              autoComplete="name"
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
               required
-              value={name}
-              aria-invalid={Boolean(fieldErrors.name)}
-              aria-describedby={fieldErrors.name ? "name-error" : undefined}
-              onChange={(event) => setName(event.target.value)}
-              className={inputClassName}
-              placeholder="Alex Morgan"
+              placeholder="Enter your password"
+              value={password}
+              aria-invalid={Boolean(fieldErrors.password)}
+              onChange={(event) => setPassword(event.target.value)}
             />
-            {fieldErrors.name ? (
-              <p id="name-error" role="alert" className="text-sm text-destructive">
-                {fieldErrors.name}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-violet-950">
-              Email address
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              aria-invalid={Boolean(fieldErrors.email)}
-              aria-describedby={fieldErrors.email ? "email-error" : undefined}
-              onChange={(event) => setEmail(event.target.value)}
-              className={inputClassName}
-              placeholder="you@example.com"
-            />
-            {fieldErrors.email ? (
-              <p id="email-error" role="alert" className="text-sm text-destructive">
-                {fieldErrors.email}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-violet-950">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                required
-                value={password}
-                aria-invalid={Boolean(fieldErrors.password)}
-                aria-describedby="password-hint"
-                onChange={(event) => setPassword(event.target.value)}
-                className={`${inputClassName} pr-11`}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute top-1 right-1 text-violet-700 hover:bg-violet-50 hover:text-violet-800"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((current) => !current)}
-              >
-                {showPassword ? <EyeOff /> : <Eye />}
-              </Button>
-            </div>
-            <p
-              id="password-hint"
-              role={fieldErrors.password ? "alert" : undefined}
-              className={fieldErrors.password ? "text-sm text-destructive" : "text-sm text-muted-foreground"}
+            <button
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((current) => !current)}
             >
-              {fieldErrors.password ??
-                "At least 8 characters, with one letter and one number."}
-            </p>
+              {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+            </button>
           </div>
-
-          {formError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {formError}
-            </p>
-          ) : null}
-
-          <Button
-            type="submit"
-            size="lg"
-            className="h-10 w-full bg-violet-700 text-white hover:bg-violet-800"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Creating account..." : "Create account"}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="font-medium text-violet-700 hover:text-violet-800">
-            Sign in
-          </Link>
+          <small className={fieldErrors.password ? "field-error" : undefined}>
+            {fieldErrors.password ?? "At least 8 characters, with one letter and one number."}
+          </small>
+        </label>
+        <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Creating account..." : "Create account"}
+        </button>
+        <p className="auth-switch">
+          Already have an account? <Link to="/login">Sign in</Link>
         </p>
-      </div>
-    </main>
+      </form>
+    </AuthShell>
   );
 }
 

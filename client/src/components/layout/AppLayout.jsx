@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import Header from "./Header";
-import { getNavigationItem } from "./navigation";
+import { navigation } from "./navigation";
 import Sidebar from "./Sidebar";
 
 function AppLayout() {
   const { pathname } = useLocation();
   const [navigationOpen, setNavigationOpen] = useState(false);
-  const currentPage = getNavigationItem(pathname);
 
   useEffect(() => {
     if (!navigationOpen) {
@@ -25,19 +24,29 @@ function AppLayout() {
   }, [navigationOpen]);
 
   return (
-    <div className="flex min-h-svh bg-violet-50">
+    <div className="app-shell">
       <Sidebar open={navigationOpen} onClose={() => setNavigationOpen(false)} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="app-main">
         <Header
-          title={currentPage?.title ?? "Sweety"}
           navigationOpen={navigationOpen}
           onOpenNavigation={() => setNavigationOpen(true)}
-          onCloseNavigation={() => setNavigationOpen(false)}
         />
-        <main className="flex-1 px-4 py-6 md:px-8">
+        <main className="content">
           <Outlet />
         </main>
       </div>
+      <nav className="bottom-nav" aria-label="Primary mobile">
+        {navigation.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <NavLink key={item.path} to={item.path} className={pathname === item.path ? "active" : undefined}>
+              <Icon size={20} />
+              <span>{item.title}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
     </div>
   );
 }

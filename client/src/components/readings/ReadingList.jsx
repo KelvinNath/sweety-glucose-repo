@@ -1,66 +1,62 @@
-import ReadingListItem from "@/components/readings/ReadingListItem";
+import { Pencil, Trash2 } from "lucide-react";
+import { calendarDate, formatDisplayDate } from "@/lib/display";
 
-function formatDisplayDate(dateString) {
-  const [year, month, day] = dateString.split("-").map(Number);
+const SLOT_LABELS = {
+  MORNING: "Morning (Fasting)",
+  AFTER_BREAKFAST: "After Breakfast",
+  AFTER_LUNCH: "After Lunch",
+  AFTER_DINNER: "After Dinner",
+};
 
-  if (!year || !month || !day) {
-    return dateString;
-  }
-
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, day)));
-}
-
-function groupReadings(readings) {
-  const groups = [];
-
-  for (const reading of readings) {
-    const date = typeof reading.date === "string" ? reading.date.slice(0, 10) : "";
-    const current = groups[groups.length - 1];
-
-    if (current && current.date === date) {
-      current.readings.push(reading);
-    } else {
-      groups.push({ date, readings: [reading] });
-    }
-  }
-
-  return groups;
-}
-
-function ReadingList({ readings, onEdit, onDelete, deletingId = "" }) {
+function ReadingList({ readings, onEdit, onAskDelete }) {
   if (readings.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-violet-200 bg-white px-5 py-8 text-center text-sm text-muted-foreground">
-        No readings yet. Add your first glucose reading above.
-      </p>
+      <div className="empty">
+        <strong>No readings found</strong>
+        <p>Add your first reading to see it here.</p>
+      </div>
     );
   }
 
-  const groups = groupReadings(readings);
-
   return (
-    <div className="space-y-6">
-      {groups.map((group) => (
-        <section key={group.date || "undated"} className="space-y-3" aria-label={formatDisplayDate(group.date)}>
-          <h3 className="text-lg font-semibold text-violet-950">{formatDisplayDate(group.date)}</h3>
-          <ul className="space-y-3">
-            {group.readings.map((reading) => (
-              <ReadingListItem
-                key={reading.id}
-                reading={reading}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                isDeleting={deletingId === reading.id}
-              />
-            ))}
-          </ul>
-        </section>
-      ))}
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Reading slot</th>
+            <th>Glucose value</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {readings.map((reading) => (
+            <tr key={reading.id}>
+              <td data-label="Date">
+                <strong>{formatDisplayDate(calendarDate(reading.date))}</strong>
+              </td>
+              <td data-label="Reading slot">
+                <span className={`slot-badge slot-${String(reading.slot).toLowerCase().replaceAll("_", "-")}`}>
+                  {SLOT_LABELS[reading.slot] ?? reading.slot}
+                </span>
+              </td>
+              <td data-label="Glucose value">
+                <strong className="table-value">{reading.value} <small>mg/dL</small></strong>
+              </td>
+              <td data-label="Actions">
+                <div className="row-actions">
+                  <button type="button" onClick={() => onEdit(reading)}>
+                    <Pencil size={16} /> Edit
+                  </button>
+                  <button type="button" className="delete" onClick={() => onAskDelete(reading)}>
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Droplets, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import AuthShell from "@/components/auth/AuthShell";
 import { useAuth } from "@/context/AuthContext";
 
 function getDestination(from) {
@@ -53,92 +53,55 @@ function Login() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-violet-50 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-violet-100 bg-white p-6 shadow-lg sm:p-8">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-violet-700 text-white">
-            <Droplets className="size-6" aria-hidden="true" />
-          </span>
-          <p className="text-sm font-semibold tracking-wide text-violet-700">Sweety</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-violet-950">
-            Welcome back
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Sign in to continue tracking your glucose.
-          </p>
-        </div>
-
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-violet-950">
-              Email address
-            </label>
+    <AuthShell>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <span className="eyebrow">Welcome back</span>
+        <h2>Sign in to Sweety</h2>
+        <p>Sign in to continue tracking your glucose.</p>
+        {error ? <div className="form-alert" role="alert">{error}</div> : null}
+        <label className="field" htmlFor="email">
+          <span>Email address</span>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </label>
+        <label className="field" htmlFor="password">
+          <span>Password</span>
+          <div className="password-wrap">
             <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="h-10 w-full rounded-lg border border-violet-100 bg-white px-3 text-sm text-violet-950 outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-violet-400 focus-visible:ring-3 focus-visible:ring-violet-200"
-              placeholder="you@example.com"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
             />
+            <button
+              type="button"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((current) => !current)}
+            >
+              {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+            </button>
           </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-violet-950">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="h-10 w-full rounded-lg border border-violet-100 bg-white px-3 pr-11 text-sm text-violet-950 outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-violet-400 focus-visible:ring-3 focus-visible:ring-violet-200"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute top-1 right-1 text-violet-700 hover:bg-violet-50 hover:text-violet-800"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((current) => !current)}
-              >
-                {showPassword ? <EyeOff /> : <Eye />}
-              </Button>
-            </div>
-          </div>
-
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-
-          <Button
-            type="submit"
-            size="lg"
-            className="h-10 w-full bg-violet-700 text-white hover:bg-violet-800"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link to="/register" className="font-medium text-violet-700 hover:text-violet-800">
-            Create one
-          </Link>
+        </label>
+        <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Signing in..." : "Sign in"}
+        </button>
+        <p className="auth-switch">
+          New to Sweety? <Link to="/register">Create an account</Link>
         </p>
-      </div>
-    </main>
+      </form>
+    </AuthShell>
   );
 }
 

@@ -1,22 +1,26 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import StatisticsCards from "@/components/dashboard/StatisticsCards";
-import TodayReadings from "@/components/dashboard/TodayReadings";
-import { Button } from "@/components/ui/button";
+import { ArrowDown, ArrowUp, BarChart3, Calendar, List, Plus, X } from "lucide-react";
+import GlucoseChart from "@/components/charts/GlucoseChart";
+import ReadingForm from "@/components/readings/ReadingForm";
 import { useAuth } from "@/context/AuthContext";
 import { getTodayKolkataDate } from "@/lib/date";
-import { getDailyReport } from "@/services/report.service";
+import { calendarDate, displayAverage, displayStat, formatDisplayDate } from "@/lib/display";
+import { createReading, getReadings } from "@/services/reading.service";
+import { getDailyReport, getMonthlyReport, getMtdReport } from "@/services/report.service";
 
-function formatDisplayDate(dateString) {
-  const [year, month, day] = dateString.split("-").map(Number);
+const SLOTS = [
+  { slot: "MORNING", label: "Morning (Fasting)", hint: "Before food" },
+  { slot: "AFTER_BREAKFAST", label: "After Breakfast", hint: "Post-meal reading" },
+  { slot: "AFTER_LUNCH", label: "After Lunch", hint: "Post-meal reading" },
+  { slot: "AFTER_DINNER", label: "After Dinner", hint: "Post-meal reading" },
+];
 
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, day)));
-}
+const SLOT_SHORT = {
+  MORNING: "Morning",
+  AFTER_BREAKFAST: "Breakfast",
+  AFTER_LUNCH: "Lunch",
+  AFTER_DINNER: "Dinner",
+};
 
 function getErrorMessage(error) {
   if (error?.status) {
@@ -26,70 +30,82 @@ function getErrorMessage(error) {
   return "We couldn't load today's readings. Please check your connection and try again.";
 }
 
-function DailyProgress({ count }) {
-  const percentage = (count / 4) * 100;
-
+function StatCard({ label, value, unit, tone, icon: Icon }) {
   return (
-    <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <h3 id="today-progress-label" className="text-lg font-semibold text-violet-950">
-          Today's progress
-        </h3>
-        <p className="text-sm font-medium text-violet-800">
-          {count} / 4
-          <span className="ml-2 text-muted-foreground">{percentage}%</span>
-        </p>
+    <div className="stat-card">
+      <div className={`stat-icon ${tone}`}>
+        <Icon size={20} />
       </div>
-      <div
-        className="mt-3 h-2 overflow-hidden rounded-full bg-violet-100"
-        role="progressbar"
-        aria-labelledby="today-progress-label"
-        aria-valuenow={percentage}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className="h-full rounded-full bg-violet-700"
-          style={{ width: `${percentage}%` }}
-        />
+      <div>
+        <span>{label}</span>
+        <strong>
+          {value}
+          {unit ? <small> {unit}</small> : null}
+        </strong>
       </div>
-    </section>
+    </div>
   );
 }
 
 function Dashboard() {
   const { user } = useAuth();
-  const [report, setReport] = useState(null);
+  const today = getTodayKolkataDate();
+  const [date, setDate] = useState(today);
+  const [daily, setDaily] = useState(null);
+  const [mtd, setMtd] = useState(null);
+  const [monthly, setMonthly] = useState(null);
+  const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [requestId, setRequestId] = useState(0);
-  const today = getTodayKolkataDate();
+  const [formOpen, setFormOpen] = useState(false);
+  const [formVersion, setFormVersion] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = user?.name?.trim().split(/\s+/)[0] || "there";
 
   useEffect(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return undefined;
+    }
+
     let cancelled = false;
 
-    getDailyReport(today)
-      .then((data) => {
-        if (!cancelled) {
-          setReport(data);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setReport(null);
-          setError(getErrorMessage(err));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
+    Promise.allSettled([
+      getDailyReport(date),
+      getMtdReport(date),
+      getMonthlyReport(date),
+      getReadings(),
+    ]).then(([dailyResult, mtdResult, monthlyResult, readingsResult]) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (dailyResult.status === "rejected") {
+        setDaily(null);
+        setError(getErrorMessage(dailyResult.reason));
+      } else {
+        setDaily(dailyResult.value);
+        setError("");
+      }
+
+      setMtd(mtdResult.status === "fulfilled" ? mtdResult.value : null);
+      setMonthly(monthlyResult.status === "fulfilled" ? monthlyResult.value : null);
+      setHistory(
+        readingsResult.status === "fulfilled" && Array.isArray(readingsResult.value?.readings)
+          ? readingsResult.value.readings
+          : [],
+      );
+      setIsLoading(false);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [today, requestId]);
+  }, [date, requestId]);
 
   function retry() {
     setError("");
@@ -97,61 +113,225 @@ function Dashboard() {
     setRequestId((current) => current + 1);
   }
 
+  function openCreate() {
+    setSubmitError(null);
+    setSuccessMessage("");
+    setFormVersion((current) => current + 1);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    if (isSaving) {
+      return;
+    }
+
+    setFormOpen(false);
+    setSubmitError(null);
+  }
+
+  async function handleCreate(data) {
+    setIsSaving(true);
+    setSubmitError(null);
+    setSuccessMessage("");
+
+    try {
+      await createReading(data);
+      setFormOpen(false);
+      setSuccessMessage("Reading added.");
+      setRequestId((current) => current + 1);
+    } catch (err) {
+      setSubmitError(err);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function handleDateChange(event) {
+    const nextDate = event.target.value;
+    setDate(nextDate);
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
+      setIsLoading(true);
+      setError("");
+    }
+  }
+
+  const statistics = daily?.statistics;
+  const readingsBySlot = new Map((daily?.readings ?? []).map((reading) => [reading.slot, reading]));
+  const chartPoints = [...history]
+    .slice(0, 10)
+    .reverse()
+    .map((reading) => ({
+      id: reading.id,
+      value: reading.value,
+      label: formatDisplayDate(calendarDate(reading.date), { year: false }),
+      detail: SLOT_SHORT[reading.slot] ?? reading.slot,
+    }));
+
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <>
+      <div className="page-intro dashboard-intro">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-violet-950">
-            {user?.name ? `Hello, ${user.name}` : "Hello"}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {formatDisplayDate(today)}
+          <span className="eyebrow">Your daily overview</span>
+          <h1>
+            {greeting}, {firstName}
+          </h1>
+          <p>
+            Here’s your glucose summary for {date === today ? "today" : formatDisplayDate(date)}.
           </p>
         </div>
-        <Button
-          nativeButton={false}
-          render={<Link to="/readings" />}
-          size="lg"
-          className="bg-violet-700 px-3 text-white hover:bg-violet-800"
-        >
-          Add Reading
-        </Button>
+        <label className="date-control">
+          <Calendar size={18} />
+          <input type="date" max={today} value={date} onChange={handleDateChange} aria-label="Report date" />
+        </label>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground" role="status">
-          Loading today's readings...
-        </p>
-      ) : null}
+      {isLoading ? <p className="status-line" role="status">Loading today’s readings...</p> : null}
 
       {!isLoading && error ? (
-        <div className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm">
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-          <Button
-            type="button"
-            className="mt-4 bg-violet-700 text-white hover:bg-violet-800"
-            onClick={retry}
-          >
-            Try again
-          </Button>
+        <div className="panel" style={{ padding: 20 }}>
+          <p className="error-line" role="alert">{error}</p>
+          <button type="button" className="btn btn-primary" onClick={retry}>Try again</button>
         </div>
       ) : null}
 
-      {!isLoading && !error && report ? (
-        <div className="space-y-6">
-          <DailyProgress count={report.statistics?.count ?? 0} />
-          {report.statistics?.count === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No readings recorded today.
-            </p>
-          ) : null}
-          <StatisticsCards statistics={report.statistics} />
-          <TodayReadings readings={report.readings} />
+      {!isLoading && !error && daily ? (
+        <>
+          <section className="stats-grid">
+            <StatCard label="Highest reading" value={displayStat(statistics?.highest)} unit={statistics?.highest == null ? undefined : "mg/dL"} icon={ArrowUp} tone="blue" />
+            <StatCard label="Lowest reading" value={displayStat(statistics?.lowest)} unit={statistics?.lowest == null ? undefined : "mg/dL"} icon={ArrowDown} tone="green" />
+            <StatCard label="Average reading" value={displayAverage(statistics?.average)} unit={statistics?.average == null ? undefined : "mg/dL"} icon={BarChart3} tone="violet" />
+            <StatCard label="Total readings" value={statistics?.count ?? 0} icon={List} tone="amber" />
+          </section>
+
+          <div className="dashboard-grid">
+            <section className="panel readings-panel">
+              <div className="section-heading">
+                <div>
+                  <h2>{date === today ? "Today's readings" : formatDisplayDate(date, { year: false })}</h2>
+                  <p>Four daily check-in slots</p>
+                </div>
+                <button type="button" className="btn btn-primary" onClick={openCreate}>
+                  <Plus size={18} /> Add reading
+                </button>
+              </div>
+              <div className="slot-list">
+                {SLOTS.map((item, index) => {
+                  const reading = readingsBySlot.get(item.slot);
+
+                  return (
+                    <div className="slot-row" key={item.slot}>
+                      <div className="slot-time">
+                        <span className={`slot-${item.slot.toLowerCase().replaceAll("_", "-")}`}>
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <div>
+                          <strong>{item.label}</strong>
+                          <small>{item.hint}</small>
+                        </div>
+                      </div>
+                      {reading ? (
+                        <div className="slot-value">
+                          <strong>{reading.value}</strong>
+                          <span>mg/dL</span>
+                        </div>
+                      ) : (
+                        <span className="slot-empty">Not recorded</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+            <section className="panel trend-panel">
+              <div className="section-heading">
+                <div>
+                  <h2>Glucose trend</h2>
+                  <p>Your most recent readings</p>
+                </div>
+                <span className="legend"><i />Glucose</span>
+              </div>
+              <GlucoseChart points={chartPoints} />
+            </section>
+          </div>
+
+          <section className="report-section">
+            <div className="section-title">
+              <h2>Report summary</h2>
+              <p>A quick look at your monthly activity</p>
+            </div>
+            <div className="report-grid">
+              <SummaryCard title="Month to date" report={mtd} />
+              <SummaryCard title="Previous calendar month" report={monthly} />
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {successMessage ? <div className="toast" role="status">{successMessage}</div> : null}
+
+      {formOpen ? (
+        <div className="modal-backdrop" onClick={closeForm}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dashboard-reading-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <h2 id="dashboard-reading-title">Add a reading</h2>
+                <p>Record one glucose value for {formatDisplayDate(date)}.</p>
+              </div>
+              <button type="button" className="modal-close" aria-label="Close" onClick={closeForm}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <ReadingForm
+                key={`${date}-${formVersion}`}
+                initialDate={date}
+                onSubmit={handleCreate}
+                onCancel={closeForm}
+                isSaving={isSaving}
+                error={submitError}
+              />
+            </div>
+          </div>
         </div>
       ) : null}
-    </section>
+    </>
+  );
+}
+
+function SummaryCard({ title, report }) {
+  const statistics = report?.statistics;
+  const from = report?.dateRange?.from;
+  const to = report?.dateRange?.to;
+
+  return (
+    <div className="report-summary">
+      <div className="section-heading">
+        <div>
+          <h3>{title}</h3>
+          <p>{from && to ? `${formatDisplayDate(from, { year: false })} – ${formatDisplayDate(to)}` : "Unavailable"}</p>
+        </div>
+        <span className="count-pill">{statistics?.count ?? 0} readings</span>
+      </div>
+      {statistics && statistics.count > 0 ? (
+        <div className="mini-stats">
+          <div><span>Highest</span><strong>{statistics.highest} <small>mg/dL</small></strong></div>
+          <div><span>Lowest</span><strong>{statistics.lowest} <small>mg/dL</small></strong></div>
+          <div><span>Average</span><strong>{displayAverage(statistics.average)} <small>mg/dL</small></strong></div>
+        </div>
+      ) : (
+        <div className="empty">
+          <strong>No readings yet</strong>
+          <p>There are no readings in this date range.</p>
+        </div>
+      )}
+    </div>
   );
 }
 

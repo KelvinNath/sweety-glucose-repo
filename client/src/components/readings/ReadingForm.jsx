@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { getTodayKolkataDate } from "@/lib/date";
 
 const SLOTS = [
@@ -8,9 +7,6 @@ const SLOTS = [
   { slot: "AFTER_LUNCH", label: "After Lunch" },
   { slot: "AFTER_DINNER", label: "After Dinner" },
 ];
-
-const inputClassName =
-  "h-10 w-full rounded-lg border border-violet-100 bg-white px-3 text-sm text-violet-950 outline-none transition-colors focus-visible:border-violet-400 focus-visible:ring-3 focus-visible:ring-violet-200 aria-invalid:border-destructive";
 
 function fieldErrorsFromResponse(error) {
   if (error?.status !== 400 || !Array.isArray(error.data?.errors)) {
@@ -63,13 +59,24 @@ function readingValue(value) {
   return trimmed;
 }
 
-function ReadingForm({ reading = null, onSubmit, onCancel, isSaving = false, error = null }) {
+function ReadingForm({
+  reading = null,
+  initialSlot = "MORNING",
+  initialDate = "",
+  onSubmit,
+  onCancel,
+  isSaving = false,
+  error = null,
+}) {
   const today = getTodayKolkataDate();
   const isEditing = reading !== null;
+  const startingDate = /^\d{4}-\d{2}-\d{2}$/.test(initialDate) && initialDate <= today
+    ? initialDate
+    : today;
   const [date, setDate] = useState(
-    typeof reading?.date === "string" ? reading.date.slice(0, 10) : today,
+    typeof reading?.date === "string" ? reading.date.slice(0, 10) : startingDate,
   );
-  const [slot, setSlot] = useState(reading?.slot ?? "MORNING");
+  const [slot, setSlot] = useState(reading?.slot ?? initialSlot);
   const [value, setValue] = useState(reading ? String(reading.value) : "");
   const fieldErrors = fieldErrorsFromResponse(error);
   const message = formMessage(error, fieldErrors);
@@ -85,27 +92,15 @@ function ReadingForm({ reading = null, onSubmit, onCancel, isSaving = false, err
   }
 
   return (
-    <form
-      id="reading-form"
-      className="space-y-5 rounded-2xl border border-violet-100 bg-white p-5 shadow-sm"
-      onSubmit={handleSubmit}
-    >
-      <div>
-        <h3 className="text-lg font-semibold text-violet-950">
-          {isEditing ? "Edit reading" : "Add reading"}
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isEditing
-            ? "Update this glucose reading."
-            : "Record a glucose reading for a day and slot."}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <label htmlFor="reading-date" className="text-sm font-medium text-violet-950">
-            Date
-          </label>
+    <form id="reading-form" className="reading-form" onSubmit={handleSubmit}>
+      {message ? (
+        <div className="form-alert" role="alert">
+          {message}
+        </div>
+      ) : null}
+      <div className="form-grid">
+        <label className="field" htmlFor="reading-date">
+          <span>Date</span>
           <input
             id="reading-date"
             name="date"
@@ -117,19 +112,15 @@ function ReadingForm({ reading = null, onSubmit, onCancel, isSaving = false, err
             aria-invalid={Boolean(fieldErrors.date)}
             aria-describedby={fieldErrors.date ? "reading-date-error" : undefined}
             onChange={(event) => setDate(event.target.value)}
-            className={inputClassName}
           />
           {fieldErrors.date ? (
-            <p id="reading-date-error" role="alert" className="text-sm text-destructive">
+            <small id="reading-date-error" className="field-error" role="alert">
               {fieldErrors.date}
-            </p>
+            </small>
           ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="reading-slot" className="text-sm font-medium text-violet-950">
-            Slot
-          </label>
+        </label>
+        <label className="field" htmlFor="reading-slot">
+          <span>Reading slot</span>
           <select
             id="reading-slot"
             name="slot"
@@ -139,7 +130,6 @@ function ReadingForm({ reading = null, onSubmit, onCancel, isSaving = false, err
             aria-invalid={Boolean(fieldErrors.slot)}
             aria-describedby={fieldErrors.slot ? "reading-slot-error" : undefined}
             onChange={(event) => setSlot(event.target.value)}
-            className={inputClassName}
           >
             {SLOTS.map((item) => (
               <option key={item.slot} value={item.slot}>
@@ -148,16 +138,13 @@ function ReadingForm({ reading = null, onSubmit, onCancel, isSaving = false, err
             ))}
           </select>
           {fieldErrors.slot ? (
-            <p id="reading-slot-error" role="alert" className="text-sm text-destructive">
+            <small id="reading-slot-error" className="field-error" role="alert">
               {fieldErrors.slot}
-            </p>
+            </small>
           ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="reading-value" className="text-sm font-medium text-violet-950">
-            Value (mg/dL)
-          </label>
+        </label>
+        <label className="field" htmlFor="reading-value">
+          <span>Glucose value (mg/dL)</span>
           <input
             id="reading-value"
             name="value"
@@ -167,47 +154,37 @@ function ReadingForm({ reading = null, onSubmit, onCancel, isSaving = false, err
             min={40}
             max={600}
             step={1}
+            placeholder="e.g. 126"
             value={value}
             disabled={isSaving}
             aria-invalid={Boolean(fieldErrors.value)}
             aria-describedby={fieldErrors.value ? "reading-value-error" : undefined}
             onChange={(event) => setValue(event.target.value)}
-            className={inputClassName}
           />
           {fieldErrors.value ? (
-            <p id="reading-value-error" role="alert" className="text-sm text-destructive">
+            <small id="reading-value-error" className="field-error" role="alert">
               {fieldErrors.value}
-            </p>
-          ) : null}
-        </div>
+            </small>
+          ) : (
+            <small>Enter a whole number from 40 to 600.</small>
+          )}
+        </label>
       </div>
-
-      {message ? (
-        <p role="alert" className="text-sm text-destructive">
-          {message}
-        </p>
-      ) : null}
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Button
-          type="submit"
-          size="lg"
-          className="bg-violet-700 px-3 text-white hover:bg-violet-800"
-          disabled={isSaving}
-        >
-          {isSaving ? (isEditing ? "Saving changes..." : "Adding reading...") : isEditing ? "Save changes" : "Add reading"}
-        </Button>
-        {isEditing ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            onClick={onCancel}
-            disabled={isSaving}
-          >
+      <div className="form-actions">
+        {onCancel ? (
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={isSaving}>
             Cancel
-          </Button>
+          </button>
         ) : null}
+        <button type="submit" className="btn btn-primary" disabled={isSaving}>
+          {isSaving
+            ? isEditing
+              ? "Saving..."
+              : "Saving..."
+            : isEditing
+              ? "Save changes"
+              : "Save reading"}
+        </button>
       </div>
     </form>
   );
