@@ -11,14 +11,24 @@ function toUtcMidnightDate(dateString) {
 }
 
 async function createReading({ userId, date, slot, value }) {
-  return prisma.reading.create({
-    data: {
-      userId,
-      date: toUtcMidnightDate(date),
-      slot,
-      value,
-    },
-  });
+  try {
+    return await prisma.reading.create({
+      data: {
+        userId,
+        date: toUtcMidnightDate(date),
+        slot,
+        value,
+      },
+    });
+  } catch (error) {
+    if (error.code === "P2002") {
+      throw createHttpError(
+        409,
+        "A reading already exists for this date and slot."
+      );
+    }
+    throw error;
+  }
 }
 
 async function getReadings({ userId }) {
@@ -44,6 +54,12 @@ async function updateReading({ readingId, userId, date, slot, value }) {
   } catch (error) {
     if (error.code === "P2025") {
       throw createHttpError(404, "Reading not found");
+    }
+    if (error.code === "P2002") {
+      throw createHttpError(
+        409,
+        "A reading already exists for this date and slot."
+      );
     }
     throw error;
   }
