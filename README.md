@@ -4,6 +4,12 @@ Repository: [https://github.com/KelvinNath/sweety-glucose-repo](https://github.c
 
 Sweety lets a person sign in and record blood glucose readings. Each account sees only its own data. Dates use the Asia/Kolkata calendar.
 
+## Demo video
+
+[![Demo video](https://drive.google.com/thumbnail?id=1ABLyyHYLpdX_XvWGjPOdBjc1St83L_PO&sz=w1280)](https://drive.google.com/file/d/1ABLyyHYLpdX_XvWGjPOdBjc1St83L_PO/view?usp=sharing)
+
+**Demo video:** [https://drive.google.com/file/d/1ABLyyHYLpdX_XvWGjPOdBjc1St83L_PO/view?usp=sharing](https://drive.google.com/file/d/1ABLyyHYLpdX_XvWGjPOdBjc1St83L_PO/view?usp=sharing)
+
 ## 1. Project overview
 
 A person can save up to four readings a day:
